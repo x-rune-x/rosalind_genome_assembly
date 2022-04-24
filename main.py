@@ -46,19 +46,17 @@ def create_contig(fasta_list):
                 for val, base in enumerate(current_seq):
                     sub_seq = current_seq[val:]
                     current_contig = ''
-                    for sub_seq_base, check_seq_base in zip(sub_seq, check_seq):
+                    for i, (sub_seq_base, check_seq_base) in enumerate(zip(sub_seq, check_seq)):
                         if sub_seq_base == check_seq_base:
                             current_contig += sub_seq_base
+                            if i == len(sub_seq) - 1 and len(current_contig) > 1:
+                                sequence_contigs.append(f'{current_seq[:-len(current_contig)]}{check_seq}')
                         else:
                             break
 
-                    # Rosalind specifies reads must overlap by more than half their length
-                    if len(current_contig) >= len(current_seq) / 2:
-                        contig_length = len(current_contig)
-                        sequence_contigs.append(f'{current_seq[:-contig_length]}{check_seq}')
         contigs_list += sequence_contigs
         print(current_seq, sequence_contigs)
-    print(contigs_list)
+    return contigs_list
 
 
 seqs = create_fasta_list('sample.txt')
