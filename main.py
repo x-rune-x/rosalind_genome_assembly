@@ -34,30 +34,39 @@ def create_fasta_list(file_name):
     return fasta_list
 
 
-def create_contig(fasta_list):
+def create_contig(input_sequences, original_seqs):
     contigs_list = []
-    for fasta in fasta_list:
-        current_seq = fasta.sequence
-        # Want to find all other sequences with areas that overlap with the sequence we are checking.
-        sequence_contigs = []
-        for check_fasta in fasta_list:
-            if fasta.get_id != check_fasta.get_id:
-                check_seq = check_fasta.sequence
-                for val, base in enumerate(current_seq):
-                    sub_seq = current_seq[val:]
-                    current_contig = ''
-                    for i, (sub_seq_base, check_seq_base) in enumerate(zip(sub_seq, check_seq)):
-                        if sub_seq_base == check_seq_base:
-                            current_contig += sub_seq_base
-                            if i == len(sub_seq) - 1 and len(current_contig) > 1:
-                                sequence_contigs.append(f'{current_seq[:-len(current_contig)]}{check_seq}')
-                        else:
-                            break
+    for val, sequence in enumerate(input_sequences):
+        if all(original_seq in sequence for original_seq in original_seqs):
+            return sequence
+        else:
+            # Want to find all other sequences with areas that overlap with the sequence we are checking.
+            sequence_contigs = []
+            for check_sequence in input_sequences:
+                if input_sequences.index(check_sequence) != val:
+                    for index, base in enumerate(check_sequence):
+                        sub_seq = sequence[index:]
+                        current_contig = ''
+                        for i, (sub_seq_base, check_seq_base) in enumerate(zip(sub_seq, check_sequence)):
+                            if sub_seq_base == check_seq_base:
+                                current_contig += sub_seq_base
+                                if i == len(sub_seq) - 1 and len(current_contig) > 1:
+                                    sequence_contigs.append(f'{sequence[:-len(current_contig)]}{check_sequence}')
+                            else:
+                                break
+            if len(sequence_contigs):
+                # Make assumption that the shortest contig has the most overlap.
+                contigs_list.append(min(sequence_contigs))
+            else:
+                contigs_list.append(sequence)
+    print(contigs_list)
+    return create_contig(contigs_list, original_seqs)
 
-        contigs_list += sequence_contigs
-        print(current_seq, sequence_contigs)
-    return contigs_list
 
+sequence_list = [x.get_seq() for x in create_fasta_list('rosalind_long.txt')]
+genome = create_contig(sequence_list, sequence_list)
+print(genome)
 
-seqs = create_fasta_list('sample.txt')
-print(create_contig(seqs))
+with open('result.txt', 'w') as writer:
+    writer.write(genome)
+
