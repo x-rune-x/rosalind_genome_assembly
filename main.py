@@ -35,38 +35,48 @@ def create_fasta_list(file_name):
 
 
 def create_contig(input_sequences, original_seqs):
-    contigs_list = []
+    new_contigs = []
     for val, sequence in enumerate(input_sequences):
         if all(original_seq in sequence for original_seq in original_seqs):
             return sequence
         else:
             # Want to find all other sequences with areas that overlap with the sequence we are checking.
-            sequence_contigs = []
             for check_sequence in input_sequences:
+                # Prevent checking string against itself but don't exclude duplicate sequences.
                 if input_sequences.index(check_sequence) != val:
-                    for index, base in enumerate(check_sequence):
-                        sub_seq = sequence[index:]
-                        current_contig = ''
-                        for i, (sub_seq_base, check_seq_base) in enumerate(zip(sub_seq, check_sequence)):
-                            if sub_seq_base == check_seq_base:
-                                current_contig += sub_seq_base
-                                if i == len(sub_seq) - 1 and len(current_contig) > 1:
-                                    sequence_contigs.append(f'{sequence[:-len(current_contig)]}{check_sequence}')
-                            else:
-                                break
-            if len(sequence_contigs):
-                # Make assumption that the shortest contig has the most overlap.
-                contigs_list.append(min(sequence_contigs))
+                    combined_strings = combine_strings_with_overlap(sequence, check_sequence)
+                    if combined_strings:
+                        new_contigs.append(combined_strings)
+                        input_sequences.remove(sequence)
+                        input_sequences.remove(check_sequence)
+
+    if len(new_contigs):
+        new_seq_with_most_overlap = min(new_contigs)
+        # input_sequences = [seq for seq in input_sequences if seq not in new_seq_with_most_overlap]
+        input_sequences.append(new_seq_with_most_overlap)
+
+    print(max(input_sequences))
+    return create_contig(input_sequences, original_seqs)
+
+
+def combine_strings_with_overlap(sequence, check_sequence):
+    for index, base in enumerate(sequence):
+        sub_seq = sequence[index:]
+        current_contig = ''
+        for i, (sub_seq_base, check_seq_base) in enumerate(zip(sub_seq, check_sequence)):
+            if sub_seq_base == check_seq_base:
+                current_contig += sub_seq_base
+                if i == len(sub_seq) - 1 and len(current_contig) > 1:
+                    return f'{sequence[:-len(current_contig)]}{check_sequence}'
+                    # First occurrence where overlap extends to the end of sub_seq will give
+                    # combined string with most overlap. No need to keep checking.
             else:
-                contigs_list.append(sequence)
-    print(contigs_list)
-    return create_contig(contigs_list, original_seqs)
+                break
 
 
 sequence_list = [x.get_seq() for x in create_fasta_list('rosalind_long.txt')]
 genome = create_contig(sequence_list, sequence_list)
-print(genome)
+print(f'Longest superstring is {genome}')
 
 with open('result.txt', 'w') as writer:
     writer.write(genome)
-
