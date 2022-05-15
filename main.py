@@ -13,6 +13,18 @@ class FastaObj:
         return len(self.sequence)
 
 
+class CombinedString:
+    def __init__(self, sequence, overlap, parent1, parent2):
+        self.sequence = sequence
+        self.overlap = overlap
+        self.parent1 = parent1
+        self.parent2 = parent2
+
+
+def get_overlap(combined_string):  # Method for sort method used in create_contig
+    return combined_string.overlap
+
+
 def create_fasta_list(file_name):
     with open(file_name) as file:
         current_id = ""
@@ -34,48 +46,48 @@ def create_fasta_list(file_name):
     return fasta_list
 
 
-def create_contig(input_sequences, original_seqs):
-    new_contigs = []
-    for val, sequence in enumerate(input_sequences):
-        if all(original_seq in sequence for original_seq in original_seqs):
-            return sequence
-        else:
-            # Want to find all other sequences with areas that overlap with the sequence we are checking.
-            for check_sequence in input_sequences:
-                # Prevent checking string against itself but don't exclude duplicate sequences.
-                if input_sequences.index(check_sequence) != val:
-                    combined_strings = combine_strings_with_overlap(sequence, check_sequence)
-                    if combined_strings:
-                        new_contigs.append(combined_strings)
-                        input_sequences.remove(sequence)
-                        input_sequences.remove(check_sequence)
+def create_superstring(input_sequences):
+    if len(input_sequences) == 1:
+        return input_sequences[0]
 
-    if len(new_contigs):
-        new_seq_with_most_overlap = min(new_contigs)
-        # input_sequences = [seq for seq in input_sequences if seq not in new_seq_with_most_overlap]
-        input_sequences.append(new_seq_with_most_overlap)
+    new_string_combinations = []
+    for sequence in input_sequences:
+        # Want to find all other sequences with areas that overlap with the sequence we are checking.
+        for check_sequence in input_sequences:
+            if sequence != check_sequence:
+                # Avoid checking duplicates.
+                combo_string = combine_strings_with_overlap(sequence, check_sequence)
+                if combo_string:
+                    new_string_combinations.append(combo_string)
 
-    print(max(input_sequences))
-    return create_contig(input_sequences, original_seqs)
+    new_string_combinations.sort(key=get_overlap, reverse=True)
+    new_seq_with_most_overlap = new_string_combinations[0]
+
+    input_sequences.remove(new_seq_with_most_overlap.parent1)
+    input_sequences.remove(new_seq_with_most_overlap.parent2)
+    input_sequences.append(new_seq_with_most_overlap.sequence)
+
+    return create_superstring(input_sequences)
 
 
 def combine_strings_with_overlap(sequence, check_sequence):
     for index, base in enumerate(sequence):
         sub_seq = sequence[index:]
-        current_contig = ''
+        current_overlap = ''
         for i, (sub_seq_base, check_seq_base) in enumerate(zip(sub_seq, check_sequence)):
             if sub_seq_base == check_seq_base:
-                current_contig += sub_seq_base
-                if i == len(sub_seq) - 1 and len(current_contig) > 1:
-                    return f'{sequence[:-len(current_contig)]}{check_sequence}'
+                current_overlap += sub_seq_base
+                if i == len(sub_seq) - 1 and len(current_overlap) > 1:
                     # First occurrence where overlap extends to the end of sub_seq will give
                     # combined string with most overlap. No need to keep checking.
+                    combined_string = f'{sequence[:-len(current_overlap)]}{check_sequence}'
+                    return CombinedString(combined_string, len(current_overlap), sequence, check_sequence)
             else:
                 break
 
 
 sequence_list = [x.get_seq() for x in create_fasta_list('rosalind_long.txt')]
-genome = create_contig(sequence_list, sequence_list)
+genome = create_superstring(sequence_list)
 print(f'Longest superstring is {genome}')
 
 with open('result.txt', 'w') as writer:
