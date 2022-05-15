@@ -21,10 +21,6 @@ class CombinedString:
         self.parent2 = parent2
 
 
-def get_overlap(combined_string):  # Method for sort method used in create_contig
-    return combined_string.overlap
-
-
 def create_fasta_list(file_name):
     with open(file_name) as file:
         current_id = ""
@@ -60,7 +56,7 @@ def create_superstring(input_sequences):
                 if combo_string:
                     new_string_combinations.append(combo_string)
 
-    new_string_combinations.sort(key=get_overlap, reverse=True)
+    new_string_combinations.sort(key=lambda x: x.overlap, reverse=True)
     new_seq_with_most_overlap = new_string_combinations[0]
 
     input_sequences.remove(new_seq_with_most_overlap.parent1)
